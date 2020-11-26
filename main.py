@@ -35,8 +35,18 @@ class GenerateReport(Task):
             for month in report:
                 print(month + ',' + str(report[month]), file=out)
 
-
-
+class SummarizeReport(Task):
+    def requires(self):
+        return GenerateReport()
+    def output(self):
+        return LocalTarget('summary.txt')
+    def run(self):
+        total = 0.0
+        for line in self.input().open():
+            month, amount = line.split(',')
+            total += float(amount)
+        with self.output().open('w') as f:
+            f.write(str(total))
 # class MyTask(luigi.Task):
 #     x = luigi.IntParameter()
 #     y = luigi.IntParameter(default=45)
@@ -45,4 +55,4 @@ class GenerateReport(Task):
 #         print(self.x + self.y)
 
 if __name__ == '__main__':
-    luigi.run(['GenerateReport', '--local-scheduler'])
+    luigi.run(['SummarizeReport'])

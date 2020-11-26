@@ -8,7 +8,15 @@ class SayHello(luigi.Task):
         with self.output().open('w') as f:
             f.write('ok')
 
+# class MyTask(luigi.Task):
+#     x = luigi.IntParameter()
+#     y = luigi.IntParameter(default=45)
+
+#     def run(self):
+#         print(self.x + self.y)
+
+
 def print_hi(name):
     print("hi " + str(name))
 if __name__ == '__main__':
-    print(print_hi("Todd"))
+    luigi.run(['SayHello', '--local-scheduler'])

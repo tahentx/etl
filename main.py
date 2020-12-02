@@ -1,58 +1,49 @@
+import os
+
 import luigi
-from luigi import Task, LocalTarget
-# class SayHello(Task):
-#     def output(self):
-#         return luigi.LocalTarget('result.csv')
-#     def run(self):
-#         print('hello world')
-#         with self.output().open('w') as f:
-#             f.write('ok')
+from luigi import Task, Parameter, LocalTarget, IntParameter
 
-class ProcessOrders(Task):
-    def output(self):
-        return LocalTarget('orders.csv')
-    def run(self):
-        with self.output().open('w') as f:
-            print('May, 100', file=f)
-            print('May, 180', file=f)
-            print('June, 200', file=f)
-            print('June, 150', file=f)
+INPUT_FOLDER = 'input'
+OUTPUT_FOLDER = 'output'
 
-class GenerateReport(Task):
-    def requires(self):
-        return ProcessOrders()
+
+class DownloadFile(Task):
+    file_name = Parameter()
+    index = IntParameter()
+
     def output(self):
-        return LocalTarget('report.csv')
+        path = os.path.join(OUTPUT_FOLDER,
+                            str(self.index),
+                            self.file_name)
+        return LocalTarget(path)
+
     def run(self):
-        report = {}
-        for line in self.input().open():
-            month, amount = line.split(',')
-            if month in report:
-                report[month] += float(amount)
-            else:
-                report[month] = float(amount)
+        input_path = os.path.join(INPUT_FOLDER, self.file_name)
+        with open(input_path) as f:
+            with self.output().open('w') as out:
+                for line in f:
+                    if ',' in line:
+                        out.write(line)
+
+
+class DownloadSalesData(Task):
+    def output(self):
+        return LocalTarget('all_sales.csv')
+
+    def run(self):
+        processed_files = []
+        counter = 1
+        for file in sorted(os.listdir(INPUT_FOLDER)):
+            target = yield DownloadFile(file, counter)
+            counter += 1
+            processed_files.append(target)
+
         with self.output().open('w') as out:
-            for month in report:
-                print(month + ',' + str(report[month]), file=out)
+            for file in processed_files:
+                with file.open() as f:
+                    for line in f:
+                        out.write(line)
 
-class SummarizeReport(Task):
-    def requires(self):
-        return GenerateReport()
-    def output(self):
-        return LocalTarget('summary.txt')
-    def run(self):
-        total = 0.0
-        for line in self.input().open():
-            month, amount = line.split(',')
-            total += float(amount)
-        with self.output().open('w') as f:
-            f.write(str(total))
-# class MyTask(luigi.Task):
-#     x = luigi.IntParameter()
-#     y = luigi.IntParameter(default=45)
-
-#     def run(self):
-#         print(self.x + self.y)
 
 if __name__ == '__main__':
-    luigi.run(['SummarizeReport'])
+    luigi.run(['DownloadSalesData'])

@@ -3,11 +3,11 @@ import os
 import luigi
 from luigi import Task, Parameter, LocalTarget, IntParameter
 
-INPUT_FOLDER = 'input'
 OUTPUT_FOLDER = 'output'
 
 
 class DownloadFile(Task):
+    input_folder = Parameter()
     file_name = Parameter()
     index = IntParameter()
 
@@ -18,7 +18,7 @@ class DownloadFile(Task):
         return LocalTarget(path)
 
     def run(self):
-        input_path = os.path.join(INPUT_FOLDER, self.file_name)
+        input_path = os.path.join(self.input_folder, self.file_name)
         with open(input_path) as f:
             with self.output().open('w') as out:
                 for line in f:
@@ -27,14 +27,17 @@ class DownloadFile(Task):
 
 
 class DownloadSalesData(Task):
+    input_folder = Parameter()
+    
     def output(self):
         return LocalTarget('all_sales.csv')
 
     def run(self):
         processed_files = []
         counter = 1
-        for file in sorted(os.listdir(INPUT_FOLDER)):
-            target = yield DownloadFile(file, counter)
+        for file in sorted(os.listdir(self.input_folder)):
+            target = yield DownloadFile(self.input_folder,
+                                        file, counter)
             counter += 1
             processed_files.append(target)
 
